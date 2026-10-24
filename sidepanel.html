@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>آنکی کنکور | اکستنشن مرور هوشمند لغات (SM-2)</title>
+  
+  
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="antialiased selection:bg-indigo-500 selection:text-white">
+
+  <!-- Toast Notification -->
+  <div id="toastContainer" class="fixed bottom-4 left-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main Wrapper -->
+  <div id="appShell" class="max-w-5xl mx-auto px-3 sm:px-5 py-4 transition-all duration-300">
+
+    <!-- Top Header -->
+    <header class="surface-card rounded-2xl p-3.5 sm:p-4 mb-4 shadow-lg">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <!-- Brand -->
+        <div class="flex items-center gap-3">
+          <img id="brandLogo" src="icons/icon128.png" alt="آنکی کنکور" class="w-11 h-11 rounded-xl object-cover shadow-md border border-indigo-400/30 max-w-full h-auto" />
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-extrabold tracking-tight">آنکی کنکور <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">SM-2</span></h1>
+            </div>
+            <p class="text-xs text-muted-custom mt-0.5">اکستنشن مرور هوشمند لغات با تفکیک خودکار لیست</p>
+          </div>
+        </div>
+
+        <!-- Live Anki Counters + Quick Actions -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl surface-elevated text-xs font-medium" title="کارت‌های جدید، در حال یادگیری و مرور امروز">
+            <span class="inline-flex items-center gap-1 text-sky-400 font-bold"><span class="w-2 h-2 rounded-full bg-sky-400"></span>جدید: <span id="hdrNewCount">0</span></span>
+            <span class="opacity-40">|</span>
+            <span class="inline-flex items-center gap-1 text-amber-400 font-bold"><span class="w-2 h-2 rounded-full bg-amber-400"></span>یادگیری: <span id="hdrLearnCount">0</span></span>
+            <span class="opacity-40">|</span>
+            <span class="inline-flex items-center gap-1 text-emerald-400 font-bold"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>مرور: <span id="hdrDueCount">0</span></span>
+          </div>
+
+          <button id="btnTogglePopupView" type="button" class="px-2.5 py-1.5 rounded-xl surface-elevated hover:bg-indigo-500/20 text-xs font-semibold transition flex items-center gap-1.5" title="تغییر بین نمای پاپ‌آپ اکستنشن و نمای کامل">
+            <span id="popupViewLabel">📱 نمای پاپ‌آپ</span>
+          </button>
+
+          <button id="btnToggleTheme" type="button" class="p-2 rounded-xl surface-elevated hover:bg-indigo-500/20 text-xs font-semibold transition" title="تغییر حالت شب و روز">
+            <span id="themeIcon">☀️</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3.5 pt-3 border-t border-slate-700/40">
+        <button id="tabBtnStudy" data-tab="study" type="button" class="tab-nav-btn tab-btn-active px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5">
+          <span>🎴</span>
+          <span>مرور کارت‌ها</span>
+          <span id="tabBadgeDue" class="px-1.5 py-0.2 rounded-full text-[11px] bg-white/20">0</span>
+        </button>
+        <button id="tabBtnImport" data-tab="import" type="button" class="tab-nav-btn surface-elevated hover:bg-indigo-500/15 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5">
+          <span>⚡</span>
+          <span>ورود لیست لغات</span>
+        </button>
+        <button id="tabBtnBrowser" data-tab="browser" type="button" class="tab-nav-btn surface-elevated hover:bg-indigo-500/15 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5">
+          <span>📚</span>
+          <span>بانک لغات (<span id="tabBadgeTotal">0</span>)</span>
+        </button>
+        <button id="tabBtnStats" data-tab="stats" type="button" class="tab-nav-btn surface-elevated hover:bg-indigo-500/15 px-3 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center justify-center gap-1.5">
+          <span>📊</span>
+          <span>آمار و نصب اکستنشن</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- ==================== TAB 1: STUDY & REVIEW (ANKI ENGINE) ==================== -->
+    <section id="viewStudy" class="space-y-4">
+      <!-- Study Control Bar -->
+      <div class="surface-card rounded-2xl p-3 sm:p-3.5 flex flex-wrap items-center justify-between gap-2.5">
+        <div class="flex flex-wrap items-center gap-2">
+          <label for="studyDeckSelect" class="text-xs font-bold text-muted-custom">دسته مرور:</label>
+          <select id="studyDeckSelect" class="surface-elevated text-xs sm:text-sm font-semibold rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">همه دسته‌ها</option>
+          </select>
+
+          <button id="btnToggleDirection" type="button" class="surface-elevated hover:bg-indigo-500/20 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1" title="تغییر جهت پرسش کارت">
+            <span>🔄 جهت:</span>
+            <span id="directionLabel" class="text-indigo-400 font-bold">انگلیسی ⬅ فارسی</span>
+          </button>
+
+          <button id="btnToggleAutoSpeak" type="button" class="surface-elevated hover:bg-indigo-500/20 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition flex items-center gap-1" title="تلفظ صوتی خودکار هنگام نمایش لغت انگلیسی">
+            <span>🔊 تلفظ خودکار:</span>
+            <span id="autoSpeakLabel" class="text-emerald-400 font-bold">فعال</span>
+          </button>
+        </div>
+
+        <!-- Spare-Time Quick Timer -->
+        <div class="flex items-center gap-1.5 surface-elevated px-2.5 py-1 rounded-xl">
+          <span class="text-xs text-muted-custom">⏱️ تایمر فراغت:</span>
+          <span id="timerDisplay" class="font-en text-xs sm:text-sm font-extrabold text-amber-400 min-w-[46px] text-center">10:00</span>
+          <button id="btnTimerStartPause" type="button" class="px-2 py-0.5 rounded-lg bg-indigo-500/25 hover:bg-indigo-500/40 text-indigo-300 text-xs font-bold transition">شروع</button>
+          <button id="btnTimerReset" type="button" class="px-1.5 py-0.5 rounded-lg hover:bg-slate-600/40 text-xs transition" title="ریست تایمر 10 دقیقه‌ای">↺</button>
+        </div>
+      </div>
+
+      <!-- Active Flashcard Container -->
+      <div id="studyActiveContainer" class="surface-card rounded-3xl p-5 sm:p-7 shadow-xl flashcard-box flex flex-col justify-between relative overflow-hidden">
+        <!-- Top Status Row inside Card -->
+        <div class="flex items-center justify-between gap-2 pb-3 border-b border-slate-700/40">
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="cardStateBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">جدید</span>
+            <span id="cardDeckBadge" class="px-2.5 py-0.5 rounded-full text-xs font-medium surface-elevated">لغات پرتکرار کنکور</span>
+            <span id="cardMetaInfo" class="text-[11px] text-muted-custom font-en">EF: 2.50 | گام: 0</span>
+          </div>
+
+          <div class="flex items-center gap-1.5">
+            <button id="btnPronounceCard" type="button" class="px-2.5 py-1 rounded-xl surface-elevated hover:bg-indigo-500/25 text-xs font-semibold transition flex items-center gap-1" title="تلفظ صوتی لغت انگلیسی (کلید P)">
+              <span>🔊</span>
+              <span class="hidden sm:inline">تلفظ</span>
+            </button>
+            <button id="btnStarCard" type="button" class="p-1.5 rounded-xl surface-elevated hover:bg-amber-500/25 text-sm transition" title="نشان‌دار کردن لغت مهم">
+              <span id="cardStarIcon">☆</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Card Front (Question) -->
+        <div id="cardFrontArea" class="my-6 text-center cursor-pointer select-none py-4" title="برای نمایش پاسخ کلیک کنید">
+          <div id="cardPromptHint" class="text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">Front • روی کارت (لغت انگلیسی)</div>
+          <div id="cardFrontText" dir="ltr" class="font-en text-3xl sm:text-5xl font-black tracking-tight break-words">arise</div>
+          <div id="cardFrontSub" class="text-xs text-muted-custom mt-3">برای مشاهده معنی پشت کارت کلیک کنید یا کلید <kbd class="px-1.5 py-0.5 rounded surface-elevated font-en text-[11px]">Space</kbd> را بزنید</div>
+        </div>
+
+        <!-- Card Back (Answer - Hidden until revealed) -->
+        <div id="cardBackArea" class="hidden border-t border-dashed border-indigo-500/40 pt-5 mt-2 text-center answer-reveal-anim">
+          <div id="cardAnswerHint" class="text-xs font-semibold text-emerald-400 mb-2.5">Back • پشت کارت (معنی فارسی)</div>
+          <div id="cardBackChips" class="flex flex-wrap items-center justify-center gap-2 mb-3"></div>
+          <div id="cardBackRaw" class="text-lg sm:text-2xl font-extrabold text-emerald-300 leading-relaxed">ظهور کردن - پدید آمدن</div>
+          <div id="cardExampleBox" class="mt-3 text-xs sm:text-sm text-muted-custom font-en dir-ltr italic hidden"></div>
+
+          <!-- Quick inline note editor -->
+          <div class="mt-4 max-w-md mx-auto flex items-center gap-1.5">
+            <input id="cardNoteInput" type="text" placeholder="افزودن نکته، هم‌خانواده یا مثال کنکوری برای این لغت…" class="w-full surface-elevated rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button id="btnSaveCardNote" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shrink-0 transition">ذخیره نکته</button>
+          </div>
+        </div>
+
+        <!-- Action Bar: Show Answer Button OR 4 Anki Rating Buttons -->
+        <div class="pt-4 mt-2">
+          <button id="btnShowAnswer" type="button" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+            <span>👀 نمایش معنی پشت کارت</span>
+            <span class="text-xs font-normal opacity-80 font-en">(Space)</span>
+          </button>
+
+          <div id="ankiRatingGrid" class="hidden grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <button id="btnRateAgain" data-rating="1" type="button" class="anki-rate-btn p-2.5 rounded-2xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 transition flex flex-col items-center">
+              <span id="lblIntervalAgain" class="text-[11px] font-bold opacity-85 mb-0.5">&lt; ۱ دقیقه</span>
+              <span class="text-sm font-extrabold">۱. دوباره (Again)</span>
+              <span class="text-[10px] opacity-75 mt-0.5">بلد نبودم</span>
+            </button>
+
+            <button id="btnRateHard" data-rating="2" type="button" class="anki-rate-btn p-2.5 rounded-2xl bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 transition flex flex-col items-center">
+              <span id="lblIntervalHard" class="text-[11px] font-bold opacity-85 mb-0.5">۶ دقیقه</span>
+              <span class="text-sm font-extrabold">۲. سخت (Hard)</span>
+              <span class="text-[10px] opacity-75 mt-0.5">با مکث یادم آمد</span>
+            </button>
+
+            <button id="btnRateGood" data-rating="3" type="button" class="anki-rate-btn p-2.5 rounded-2xl bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 transition flex flex-col items-center">
+              <span id="lblIntervalGood" class="text-[11px] font-bold opacity-85 mb-0.5">۱۰ دقیقه</span>
+              <span class="text-sm font-extrabold">۳. خوب (Good)</span>
+              <span class="text-[10px] opacity-75 mt-0.5">یادآوری مناسب</span>
+            </button>
+
+            <button id="btnRateEasy" data-rating="4" type="button" class="anki-rate-btn p-2.5 rounded-2xl bg-sky-500/15 hover:bg-sky-500/30 border border-sky-500/40 text-sky-300 transition flex flex-col items-center">
+              <span id="lblIntervalEasy" class="text-[11px] font-bold opacity-85 mb-0.5">۴ روز</span>
+              <span class="text-sm font-extrabold">۴. آسان (Easy)</span>
+              <span class="text-[10px] opacity-75 mt-0.5">کاملاً مسلط</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty / Completed Deck State -->
+      <div id="studyDoneContainer" class="hidden surface-card rounded-3xl p-7 text-center space-y-4 shadow-xl">
+        <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-3xl mx-auto">🎉</div>
+        <h2 class="text-xl sm:text-2xl font-extrabold">مرور زمان‌بندی‌شده این نوبت تمام شد!</h2>
+        <p class="text-xs sm:text-sm text-muted-custom max-w-md mx-auto leading-relaxed">
+          تمام کارت‌هایی که موعد مرورشان رسیده بود را پاسخ دادید. اگر هنوز وقت اضافه دارید می‌توانید از «مرور آزاد (Cram)» استفاده کنید یا لیست لغات جدیدی وارد کنید.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+          <button id="btnStartCramAll" type="button" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold transition shadow-lg shadow-indigo-600/30">
+            🔄 مرور آزاد همه کارت‌های این دسته (خارج از نوبت)
+          </button>
+          <button id="btnStartCramStarred" type="button" class="px-4 py-2.5 rounded-xl surface-elevated hover:bg-amber-500/20 text-amber-300 text-xs sm:text-sm font-bold transition">
+            ⭐ مرور فقط لغات نشان‌دار
+          </button>
+          <button id="btnGoToImportFromDone" type="button" class="px-4 py-2.5 rounded-xl surface-elevated hover:bg-emerald-500/20 text-emerald-300 text-xs sm:text-sm font-bold transition">
+            ➕ افزودن لیست لغات جدید
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: BULK AUTO-IMPORT (WORD = MEANING) ==================== -->
+    <section id="viewImport" class="hidden space-y-4">
+      <div class="surface-card rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 class="text-base sm:text-lg font-extrabold flex items-center gap-2">
+              <span>⚡ ورود یکجا و تفکیک خودکار لیست لغات</span>
+            </h2>
+            <p class="text-xs text-muted-custom mt-1 leading-relaxed">
+              لیست لغات خود را کپی و در کادر زیر جای‌گذاری کنید (هر خط یک لغت). سیستم به‌طور خودکار عبارت انگلیسی قبل از <code class="px-1.5 py-0.5 rounded surface-elevated text-indigo-300 font-en">=</code> را روی کارت (Front) و معنی فارسی بعد از <code class="px-1.5 py-0.5 rounded surface-elevated text-emerald-300 font-en">=</code> را پشت کارت (Back) قرار می‌دهد.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnInsertSampleList" type="button" class="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition">
+              📋 درج نمونه لیست کنکوری
+            </button>
+            <label for="txtFileUpload" class="cursor-pointer px-3 py-1.5 rounded-xl surface-elevated hover:bg-emerald-500/20 text-xs font-bold transition">
+              📂 بارگذاری فایل متنی (.txt)
+            </label>
+            <input id="txtFileUpload" type="file" accept=".txt,.csv" class="hidden" />
+            <button id="btnClearBulkInput" type="button" class="px-2.5 py-1.5 rounded-xl surface-elevated hover:bg-rose-500/20 text-rose-300 text-xs font-bold transition">
+              پاک کردن کادر
+            </button>
+          </div>
+        </div>
+
+        <!-- Target Deck & Duplicate Settings -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 rounded-2xl surface-elevated">
+          <div>
+            <label for="importDeckInput" class="block text-xs font-bold mb-1">نام دسته (Deck) مقصد:</label>
+            <input id="importDeckInput" type="text" value="لغات پرتکرار کنکور" placeholder="مثلاً: لغات درس ۱ دوازدهم" class="w-full surface-card rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label for="importDuplicateMode" class="block text-xs font-bold mb-1">برخورد با لغات تکراری:</label>
+            <select id="importDuplicateMode" class="w-full surface-card rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="update">به‌روزرسانی معنی لغت تکراری</option>
+              <option value="skip">رد کردن لغات تکراری</option>
+              <option value="add">افزودن به عنوان کارت جدید</option>
+            </select>
+          </div>
+          <div class="flex flex-col justify-center">
+            <span class="text-xs font-bold mb-1">فرمت‌های پشتیبانی‌شده:</span>
+            <span class="text-[11px] text-muted-custom font-en" dir="ltr">arise = ظهور کردن - پدید آمدن</span>
+          </div>
+        </div>
+
+        <!-- Textarea Input -->
+        <div>
+          <textarea id="bulkWordsTextarea" rows="7" dir="auto" placeholder="مثال:&#10;arise = ظهور کردن - پدید آمدن&#10;inevitable = اجتناب‌ناپذیر - حتمی&#10;obstacle = مانع - سد راه&#10;comprehend = درک کردن - فهمیدن" class="w-full surface-elevated rounded-2xl p-3.5 text-xs sm:text-sm leading-7 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"></textarea>
+        </div>
+
+        <!-- Live Parse Summary & Submit Button -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+          <div class="flex flex-wrap items-center gap-3 text-xs">
+            <span class="px-3 py-1 rounded-xl surface-elevated font-bold">کارت‌های شناسایی‌شده: <span id="parseCountValid" class="text-emerald-400">0</span></span>
+            <span class="px-3 py-1 rounded-xl surface-elevated font-bold">خطوط نامعتبر/خالی: <span id="parseCountInvalid" class="text-amber-400">0</span></span>
+          </div>
+
+          <button id="btnCommitBulkImport" type="button" class="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/30 transition">
+            ✅ افزودن خودکار کارت‌ها به بانک لغات
+          </button>
+        </div>
+
+        <!-- Live Preview Table -->
+        <div class="border-t border-slate-700/40 pt-4">
+          <h3 class="text-xs font-extrabold text-muted-custom mb-2.5">پیش‌نمایش زنده تفکیک خودکار (Front / Back):</h3>
+          <div class="overflow-x-auto max-h-64 rounded-2xl border border-slate-700/40">
+            <table class="w-full text-right text-xs">
+              <thead class="surface-elevated text-muted-custom sticky top-0">
+                <tr>
+                  <th class="py-2.5 px-3 font-bold w-12">#</th>
+                  <th class="py-2.5 px-3 font-bold">Front (روی کارت - انگلیسی)</th>
+                  <th class="py-2.5 px-3 font-bold">Back (پشت کارت - معنی فارسی)</th>
+                  <th class="py-2.5 px-3 font-bold">مثال / نکته</th>
+                  <th class="py-2.5 px-3 font-bold w-24">وضعیت</th>
+                </tr>
+              </thead>
+              <tbody id="livePreviewTbody" class="divide-y divide-slate-700/30"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: CARD BROWSER & DECK MANAGER ==================== -->
+    <section id="viewBrowser" class="hidden space-y-4">
+      <div class="surface-card rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-base sm:text-lg font-extrabold">📚 بانک لغات و مدیریت کارت‌ها</h2>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnExportTxtList" type="button" class="px-3 py-1.5 rounded-xl surface-elevated hover:bg-indigo-500/20 text-xs font-bold transition">
+              📤 خروجی متنی (word = meaning)
+            </button>
+            <button id="btnExportJsonBackup" type="button" class="px-3 py-1.5 rounded-xl surface-elevated hover:bg-emerald-500/20 text-xs font-bold transition">
+              💾 دانلود پشتیبان (JSON)
+            </button>
+            <button id="btnResetAllProgress" type="button" class="px-3 py-1.5 rounded-xl surface-elevated hover:bg-rose-500/20 text-rose-300 text-xs font-bold transition">
+              🔄 صفر کردن وضعیت مرور همه
+            </button>
+          </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <input id="browserSearchInput" type="text" placeholder="جستجوی لغت انگلیسی یا معنی فارسی…" class="surface-elevated rounded-xl px-3.5 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          <select id="browserDeckFilter" class="surface-elevated rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">همه دسته‌ها</option>
+          </select>
+          <select id="browserStateFilter" class="surface-elevated rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">همه وضعیت‌ها</option>
+            <option value="new">🆕 جدید (New)</option>
+            <option value="learning">⏳ در حال یادگیری (Learning)</option>
+            <option value="review">🔄 مرور زمان‌بندی‌شده (Review)</option>
+            <option value="starred">⭐ نشان‌دارها (Starred)</option>
+          </select>
+        </div>
+
+        <!-- Browser Table -->
+        <div class="overflow-x-auto max-h-96 rounded-2xl border border-slate-700/40">
+          <table class="w-full text-right text-xs">
+            <thead class="surface-elevated text-muted-custom sticky top-0">
+              <tr>
+                <th class="py-2.5 px-3 font-bold">Front (انگلیسی)</th>
+                <th class="py-2.5 px-3 font-bold">Back (معنی فارسی)</th>
+                <th class="py-2.5 px-3 font-bold">دسته</th>
+                <th class="py-2.5 px-3 font-bold">وضعیت Anki</th>
+                <th class="py-2.5 px-3 font-bold">موعد مرور بعدی</th>
+                <th class="py-2.5 px-3 font-bold text-center">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="browserTableBody" class="divide-y divide-slate-700/30"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Export Text Modal / Drawer -->
+      <div id="exportTextPanel" class="hidden surface-card rounded-2xl p-4 space-y-3 border border-indigo-500/40">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs sm:text-sm font-extrabold">خروجی لیست لغات با فرمت استاندارد (word = meaning)</h3>
+          <div class="flex items-center gap-2">
+            <button id="btnCopyExportText" type="button" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">کپی متن</button>
+            <button id="btnCloseExportPanel" type="button" class="px-2.5 py-1 rounded-lg surface-elevated text-xs">بستن</button>
+          </div>
+        </div>
+        <textarea id="exportTextarea" rows="5" readonly dir="ltr" class="w-full surface-elevated rounded-xl p-3 text-xs font-en"></textarea>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: STATS & CHROME EXTENSION GUIDE ==================== -->
+    <section id="viewStats" class="hidden space-y-4">
+      <!-- KPI Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="surface-card rounded-2xl p-4 text-center">
+          <div class="text-xs text-muted-custom">مرورهای انجام‌شده امروز</div>
+          <div id="statReviewsToday" class="text-2xl sm:text-3xl font-black text-indigo-400 mt-1 font-en">0</div>
+        </div>
+        <div class="surface-card rounded-2xl p-4 text-center">
+          <div class="text-xs text-muted-custom">کارت‌های تثبیت‌شده (Review)</div>
+          <div id="statGraduatedCount" class="text-2xl sm:text-3xl font-black text-emerald-400 mt-1 font-en">0</div>
+        </div>
+        <div class="surface-card rounded-2xl p-4 text-center">
+          <div class="text-xs text-muted-custom">میانگین ضریب آسانی (Ease)</div>
+          <div id="statAvgEase" class="text-2xl sm:text-3xl font-black text-amber-400 mt-1 font-en">250%</div>
+        </div>
+        <div class="surface-card rounded-2xl p-4 text-center">
+          <div class="text-xs text-muted-custom">لغات نشان‌دار (مهم کنکور)</div>
+          <div id="statStarredCount" class="text-2xl sm:text-3xl font-black text-rose-400 mt-1 font-en">0</div>
+        </div>
+      </div>
+
+      <!-- How Anki SM-2 Logic Works + How to Install Chrome Extension -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="surface-card rounded-3xl p-5 space-y-3">
+          <h3 class="text-sm sm:text-base font-extrabold text-indigo-400">🧠 منطق مرور هوشمند Anki (الگوریتم SM-2)</h3>
+          <ul class="text-xs space-y-2 leading-relaxed text-muted-custom list-disc pr-4">
+            <li><strong class="text-rose-300">۱. دوباره (Again):</strong> کارت به صف یادگیری فوری (<code class="font-en">&lt; 1m</code>) برمی‌گردد تا در همین نوبت دوباره از شما پرسیده شود و ضریب آسانی آن کاهش می‌یابد.</li>
+            <li><strong class="text-amber-300">۲. سخت (Hard):</strong> فاصله مرور با ضریب محتاطانه (<code class="font-en">1.2×</code>) افزایش می‌یابد تا زودتر مرور شود.</li>
+            <li><strong class="text-emerald-300">۳. خوب (Good):</strong> کارت طبق چرخه استاندارد آنکی (<code class="font-en">10m ⬅ 1d ⬅ 3d ⬅ 7d ⬅ …</code>) در حافظه بلندمدت تثبیت می‌شود.</li>
+            <li><strong class="text-sky-300">۴. آسان (Easy):</strong> کارت مستقیماً به بازه طولانی‌تر (<code class="font-en">4d+</code>) منتقل شده و ضریب آسانی آن افزایش می‌یابد.</li>
+          </ul>
+        </div>
+
+        <div class="surface-card rounded-3xl p-5 space-y-3">
+          <h3 class="text-sm sm:text-base font-extrabold text-emerald-400">🧩 راهنمای نصب بسته اکستنشن در مرورگر کروم / اج</h3>
+          <ol class="text-xs space-y-2 leading-relaxed text-muted-custom list-decimal pr-4">
+            <li>فایل فشرده اکستنشن (<code class="font-en text-indigo-300">konkur_anki_extension.zip</code>) را دانلود و از حالت فشرده (Extract) خارج کنید.</li>
+            <li>در مرورگر Chrome، Edge یا Brave آدرس <code class="font-en text-indigo-300">chrome://extensions</code> را باز کنید.</li>
+            <li>گزینه <strong class="text-white">Developer mode</strong> را در گوشه بالا روشن کنید.</li>
+            <li>روی دکمه <strong class="text-white">Load unpacked</strong> کلیک کرده و پوشه استخراج‌شده را انتخاب کنید تا آیکون آنکی کنکور به نوار ابزار و پنل کناری (Side Panel) مرورگر اضافه شود!</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
