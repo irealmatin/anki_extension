@@ -74,7 +74,7 @@ Just like desktop Anki, the study engine (`pickNextStudyCard`) serves cards in s
 
 ### Option 1: Install as a Chrome / Edge / Brave Extension (Manifest V3)
 
-1. Download and extract `konkur_anki_extension.zip` to a folder on your computer.
+1. Download and extract `anki_extension-1.0.0.zip` to a folder on your computer.
 2. Open your Chromium-based browser and navigate to `chrome://extensions` (or `edge://extensions`).
 3. Enable **Developer mode** using the toggle switch in the top-right corner.
 4. Click **Load unpacked** in the top-left corner and select the extracted extension folder.
